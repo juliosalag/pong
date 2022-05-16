@@ -1,6 +1,6 @@
 // Declaracion de constantes
 const FPS = 60;
-const COMPUTER_LEVEL = 0.001;
+const COMPUTER_LEVEL = 0.05;
 
 const NUM_BALLS = 5;
 
@@ -102,8 +102,8 @@ function drawBall() {
     drawCircle(ball.x, ball.y, ball.radius, ball.color);
 }
 
-const localPlayer = playerA;
 const computer = playerB;
+const localPlayer = playerA;
 
 function drawScoreboard() {
     drawText(localPlayer.score, canvas.width / 4, canvas.height / 5, 'WHITE');
@@ -120,6 +120,11 @@ function gameLoop() {
     render();
 }
 
+
+function isGameOver() {
+    return localPlayer.score >= NUM_BALLS || computer.score >= NUM_BALLS;
+}
+
 // Function Update
 function update() {
     // Velocidad de la bola
@@ -132,9 +137,6 @@ function update() {
     // Rebote de la bola
     if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) { // eje Y
         ball.velocityY = -ball.velocityY;
-    }
-    if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) { // eje X
-        ball.velocityX = -ball.velocityX;
     }
 
     // Colisiones con las palas
@@ -158,7 +160,46 @@ function update() {
         ball.speed += BALL_DELTA_VELOCITY;
     }
 
+    // Actualizamos el marcador
+    if (ball.x - ball.radius < 0) {
+        computer.score++;
+        newBall();
+    } else if (ball.x + ball.radius > canvas.width) {
+        localPlayer.score++;
+        newBall();
+    }
 
+}
+
+function initPaddleMovement() {
+    canvas.addEventListener('mousemove', updateLocalPlayerPos);
+}
+
+function updateLocalPlayerPos(event) {
+    const rect = canvas.getBoundingClientRect();
+
+    localPlayer.y = event.clientY - localPlayer.height / 2 - rect.top;
+}
+
+function pause(milliseconds) {
+    stopGameLoop();
+    setTimeout(() => {
+        initGameLoop();
+    }, milliseconds);
+}
+
+function newBall() {
+    console.log('Gol');
+
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+
+    const direction = ball.velocityX > 0 ? -1 : 1;
+    ball.velocityX = direction * BALL_VELOCITY;
+    ball.velocityY = BALL_VELOCITY;
+    ball.speed = BALL_VELOCITY;
+
+    pause(500);
 }
 
 function collision(b, p) {
@@ -183,9 +224,22 @@ function updateComputer() {
 // Function Render
 function render() {
     drawBoard();
-    drawBall();
 
-    drawText('Bienvenido', 200, 100);
+    // Si hemos terminado la partida ...
+    if (isGameOver())
+        endGame();
+    else
+        drawBall();
+}
+
+function endGame() {
+    console.log('Game Over');
+
+    // Mostramos el final del juego
+    drawText('Game Over', canvas.width / 3, canvas.height / 2);
+
+    // Detenemos el bucle del juego
+    stopGameLoop();
 }
 
 function drawBoard() {
@@ -197,17 +251,22 @@ function drawBoard() {
     drawPaddle(computer);
 }
 
-var gameLoopID;
+let gameLoopID;
 
 // Function gameLoop
 function initGameLoop() {
     gameLoopID = setInterval(gameLoop, 1000 / FPS);
 }
 
+function stopGameLoop() {
+    clearInterval(gameLoopID);
+}
+
 function play() {
 
     drawBoard();
 
+    initPaddleMovement();
     initGameLoop();
 }
 
